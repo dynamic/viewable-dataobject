@@ -5,6 +5,8 @@ namespace Dynamic\ViewableDataObject\Extensions;
 use \DataExtension;
 use \FieldList;
 use \TextField;
+use \TextareaField;
+use \ToggleCompositeField;
 use \SiteTreeURLSegmentField;
 use \Controller;
 use \Director;
@@ -16,6 +18,8 @@ use \Versioned;
 use \SSViewer;
 use \ArrayList;
 use \ArrayData;
+use \Convert;
+use \Config;
 
 class ViewableDataObject extends DataExtension
 {
@@ -23,9 +27,20 @@ class ViewableDataObject extends DataExtension
      * @var array
      */
     private static $db = [
+        'Title' => 'Varchar(255)',
         'MenuTitle' => 'Varchar(255)',
         'URLSegment' => 'Varchar(255)',
+        'MetaTitle' => 'Varchar(255)',
+        'MetaDescription' => 'Varchar(255)',
     ];
+
+    /**
+     * @var array
+     */
+    private static $defaults = array(
+        'Title'=>'New Item',
+        'URLSegment' => 'new-item'
+    );
 
     /**
      * @var array
@@ -42,6 +57,8 @@ class ViewableDataObject extends DataExtension
         $fields->removeByName(array(
             'MenuTitle',
             'URLSegment',
+            'MetaTitle',
+            'MetaDescription',
         ));
 
         $fields->insertAfter(
@@ -56,6 +73,18 @@ class ViewableDataObject extends DataExtension
                 'MenuTitle'
             );
         }
+
+        $fields->addFieldToTab(
+            'Root.Main',
+            ToggleCompositeField::create(
+                'Metadata',
+                'Metadata',
+                array(
+                    new TextField("MetaTitle", $this->owner->fieldLabel('MetaTitle')),
+                    new TextareaField("MetaDescription", $this->owner->fieldLabel('MetaDescription'))
+                )
+            )
+        );
     }
 
     /**
@@ -207,6 +236,32 @@ class ViewableDataObject extends DataExtension
             '"' . $this->owner->Classname . '"."ID"' => $this->owner->ID
         ));
         return ($liveRecord) ? $liveRecord->URLSegment : null;
+    }
+
+    /**
+     * Generate custom metatags to display on the DataObject view page
+     *
+     * @param bool $includeTitle
+     * @return string
+     */
+    public function MetaTags($includeTitle = true)
+    {
+        $tags = "";
+
+        if($includeTitle === true || $includeTitle == 'true') {
+            $tags .= "<title>" . Convert::raw2xml(($this->owner->MetaTitle)
+                    ? $this->owner->MetaTitle
+                    : $this->owner->Title) . "</title>\n";
+        }
+        $tags .= "<meta name=\"generator\" content=\"SilverStripe - http://silverstripe.org\" />\n";
+        $charset = Config::inst()->get('ContentNegotiator', 'encoding');
+        $tags .= "<meta http-equiv=\"Content-type\" content=\"text/html; charset=$charset\" />\n";
+        if($this->owner->MetaDescription) {
+            $tags .= "<meta name=\"description\" content=\"" . Convert::raw2att($this->owner->MetaDescription) . "\" />\n";
+        }
+        $this->owner->extend('updateMetaTags', $tags);
+
+        return $tags;
     }
 
     /**

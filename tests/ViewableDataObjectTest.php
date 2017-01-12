@@ -58,7 +58,7 @@ class ViewableDataObjectTest extends SapphireTest
 
     public function testValidURLSegment()
     {
-        $object = $this->objFromFixture('ViewableTestObject', 'one');
+        $object = $this->getObject();
         $object2 = $this->objFromFixture('ViewableTestObject', 'two');
         $object->URLSegment = $object2->URLSegment;
         $this->assertFalse($object->validURLSegment());
@@ -68,7 +68,7 @@ class ViewableDataObjectTest extends SapphireTest
 
     public function testBreadcrumbs()
     {
-        $object = $this->objFromFixture('ViewableTestObject', 'one');
+        $object = $this->getObject();
         $this->assertInstanceOf("HTMLText", $object->Breadcrumbs());
     }
 }
