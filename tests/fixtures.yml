@@ -1,0 +1,8 @@
+ViewableTestObject:
+  one:
+    Title: 'Object One'
+  two:
+    Title: 'Object Two'
+Page:
+  default:
+    Title: 'Page One'

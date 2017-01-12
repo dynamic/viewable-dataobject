@@ -1,56 +1,91 @@
 <?php
 
-class ViewableDataObjectTest extends SapphireTest {
-	public function testUpdateCMSFields() {
-		$this->markTestSkipped('TODO');
-	}
+use Dynamic\ViewableDataObject\VDOInterfaces\ViewableDataObjectInterface;
 
-	public function testHasParentPage() {
-		$this->markTestSkipped('TODO');
-	}
+class ViewableDataObjectTest extends SapphireTest
+{
+    /**
+     * @var array
+     */
+    protected static $fixture_file = array(
+        'viewable-dataobject/tests/fixtures.yml',
+    );
 
-	public function testHasViewAction() {
-		$this->markTestSkipped('TODO');
-	}
+    /**
+     * @var array
+     */
+    protected $extraDataObjects = array(
+        'ViewableTestObject',
+    );
 
-	public function testGetLink() {
-		$this->markTestSkipped('TODO');
-	}
+    protected function getObject()
+    {
+        return $this->objFromFixture('ViewableTestObject', 'one');
+    }
 
-	public function testLink() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testUpdateCMSFields()
+    {
+        $object = $this->getObject();
+        $fields = $object->getCMSFields();
+        $this->assertInstanceOf('FieldList', $fields);
+    }
 
-	public function testGetAbsoluteLink() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testHasParentPage()
+    {
+        $object = $this->getObject();
+        $this->assertInstanceOf('Page', $object->getParentPage());
+    }
 
-	public function testValidURLSegment() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testHasViewAction()
+    {
+        $object = $this->getObject();
+        $this->assertEquals($object->hasViewAction(), 'view');
+    }
 
-	public function testFunction() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testLink()
+    {
+        $object = $this->getObject();
+        $page = $this->objFromFixture('Page', 'default');
+        $this->assertEquals($page->Link() . 'view/' . $object->URLSegment, $object->Link());
+    }
 
-	public function testGenerateURLSegment() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testGetAbsoluteLink()
+    {
+        $object = $this->getObject();
+        $page = $this->objFromFixture('Page', 'default');
+        $this->assertEquals($page->AbsoluteLink() . 'view/' . $object->URLSegment, $object->getAbsoluteLink());
+    }
 
-	public function testGetStageURLSegment() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testValidURLSegment()
+    {
+        $object = $this->objFromFixture('ViewableTestObject', 'one');
+        $object2 = $this->objFromFixture('ViewableTestObject', 'two');
+        $object->URLSegment = $object2->URLSegment;
+        $this->assertFalse($object->validURLSegment());
+        $object->URLSegment = 'object-one';
+        $this->assertTrue($object->validURLSegment());
+    }
 
-	public function testGetLiveURLSegment() {
-		$this->markTestSkipped('TODO');
-	}
+    public function testBreadcrumbs()
+    {
+        $object = $this->objFromFixture('ViewableTestObject', 'one');
+        $this->assertInstanceOf("HTMLText", $object->Breadcrumbs());
+    }
+}
 
-	public function testBreadcrumbs() {
-		$this->markTestSkipped('TODO');
-	}
+class ViewableTestObject extends DataObject implements TestOnly, Dynamic\ViewableDataObject\VDOInterfaces\ViewableDataObjectInterface
+{
+    private static $db = [
+        'Title' => 'Varchar(255)',
+        'Content' => 'HtmlText',
+    ];
 
-	public function testOnBeforeWrite() {
-		$this->markTestSkipped('TODO');
-	}
+    private static $extensions = [
+        'Dynamic\ViewableDataObject\Extensions\ViewableDataObject',
+    ];
 
+    public function getParentPage()
+    {
+        return Page::get()->first();
+    }
 }
