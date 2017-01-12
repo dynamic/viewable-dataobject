@@ -1,5 +1,7 @@
 <?php
 
+namespace Dynamic\ViewableDataObject\VDOInterfaces;
+
 /**
  * Interface DataObjectViewInterface
  */

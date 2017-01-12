@@ -1,5 +1,22 @@
 <?php
 
+namespace Dynamic\ViewableDataObject\Extensions;
+
+use \DataExtension;
+use \FieldList;
+use \TextField;
+use \SiteTreeURLSegmentField;
+use \Controller;
+use \Director;
+use \SiteConfig;
+use \ModelAsController;
+use \DataObject;
+use \URLSegmentFilter;
+use \Versioned;
+use \SSViewer;
+use \ArrayList;
+use \ArrayData;
+
 class ViewableDataObject extends DataExtension
 {
     /**
@@ -199,7 +216,7 @@ class ViewableDataObject extends DataExtension
      * @param bool $unlinked
      * @param bool $stopAtPageType
      * @param bool $showHidden
-     * @return HTMLText
+     * @return \HTMLText
      */
     public function Breadcrumbs($maxDepth = 20, $unlinked = false, $stopAtPageType = false, $showHidden = false)
     {
