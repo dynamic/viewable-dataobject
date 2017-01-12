@@ -1,0 +1,39 @@
+{
+    "name": "dynamic/viewable-dataobject",
+    "description": "DataExtension that easily allows a DataObject to be viewed like a Page",
+    "authors": [
+        {
+            "name": "Dynamic",
+            "email": "dev@dynamicagency.com",
+            "homepage": "http://www.dynamicagency.com"
+        }
+    ],
+    "keywords": [
+        "silverstripe", "dataobject", "page", "viewable"
+    ],
+    "type": "silverstripe-module",
+    "license": "BSD-3-Clause",
+    "require": {
+        "silverstripe/cms": "^3.2",
+        "silverstripe/framework": "^3.2"
+    },
+    "require-dev": {
+        "phpunit/PHPUnit": "^3.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dynamic\\ViewableDataObject\\": "src"
+        }
+    },
+    "config": {
+        "process-timeout": 600
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "extra": {
+        "installer-name": "viewable-dataobject",
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
+    }
+}
