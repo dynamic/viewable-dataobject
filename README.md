@@ -1,4 +1,4 @@
-# viewable-dataobject
+# SilverStripe Viewable Dataobject
 [![Build Status](https://travis-ci.org/dynamic/viewable-dataobject.svg?branch=master)](https://travis-ci.org/dynamic/viewable-dataobject)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/dynamic/viewable-dataobject/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/dynamic/viewable-dataobject/?branch=master)
 [![Code Coverage](https://scrutinizer-ci.com/g/dynamic/viewable-dataobject/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/dynamic/viewable-dataobject/?branch=master)
@@ -20,12 +20,55 @@ DataExtension that easily allows a dataobject to be viewed like a Page
 
 ## Installation
 
-This is how you install viewable-dataobject.
+`composer require dynamic/viewable-dataobject`
 
 ## Example usage
 
-You use viewable-dataobject like this.
+On the DataObject you'd like to view as a page:
 
-## Documentation
+```php
+<?php
+	
+use Dynamic\ViewableDataObject\VDOInterfaces\ViewableDataObjectInterface;
+	
+class MyDataObject extends DataObject implements ViewableDataObjectInterface
+{
+	public function getParentPage()
+	{
+		return MyDisplayPage::get()->first();
+	}
+	
+	public function getViewAction()
+	{
+		return 'myobject';
+	}
+}
+```	
 
-See the [docs/en](docs/en/index.md) folder.
+On the Page_Controller you'd like to view your DataObject:
+
+```php
+<?php
+	
+class MyDisplayPage_Controller extends Page_Controller
+{
+    public function myobject(SS_HTTPRequest $request)
+    {
+        $urlSegment = $request->latestParam('ID');
+	
+        if (!$object = MyDataObject::get()->filter('URLSegment', $urlSegment)->first()) {
+            return $this->httpError(404, "The object you're looking for doesn't seem to be here.");
+        }
+	
+        return $this->customise(new ArrayData([
+            'Object' => $object,
+            'Title' => $object->Title,
+            'MetaTags' => $object->MetaTags(),
+            'Breadcrumbs' => $object->Breadcrumbs(),
+        ]))->renderWith([
+            'MyDataObject',
+            'Page',
+        ]);
+    }
+} 	
+```
