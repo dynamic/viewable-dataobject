@@ -22,6 +22,15 @@ DataExtension that easily allows a dataobject to be viewed like a Page
 
 `composer require dynamic/viewable-dataobject`
 
+In config.yml;
+
+```yml
+MyDataObject:
+	extensions:
+		- ViewableDataObject
+
+```
+
 ## Example usage
 
 On the DataObject you'd like to view as a page:
