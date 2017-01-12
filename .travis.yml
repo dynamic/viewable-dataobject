@@ -7,9 +7,6 @@ addons:
     packages:
       - tidy
 
-php:
-  - 7.0
-
 before_install:
   - pip install --user codecov
 

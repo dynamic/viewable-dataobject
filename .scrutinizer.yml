@@ -22,10 +22,5 @@ coding_style:
       general:
         use_tabs: false
 
-checks:
-    php:
-        code_rating: true
-        duplication: true
-
 filter:
     paths: [tests/*,code/*]
