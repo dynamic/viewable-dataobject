@@ -27,7 +27,7 @@ In config.yml;
 ```yml
 MyDataObject:
 	extensions:
-		- ViewableDataObject
+		- Dynamic\ViewableDataObject\Extensions\ViewableDataObject
 
 ```
 
