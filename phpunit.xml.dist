@@ -1,0 +1,14 @@
+<phpunit bootstrap="framework/tests/bootstrap.php" colors="true">
+    <testsuite name="viewable-dataobject">
+        <directory>viewable-dataobject/tests</directory>
+    </testsuite>
+
+    <filter>
+        <whitelist addUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">viewable-dataobject/src/</directory>
+            <exclude>
+                <directory suffix=".php">viewable-dataobject/tests/</directory>
+            </exclude>
+        </whitelist>
+    </filter>
+</phpunit>
