@@ -72,20 +72,3 @@ class ViewableDataObjectTest extends SapphireTest
         $this->assertInstanceOf("HTMLText", $object->Breadcrumbs());
     }
 }
-
-class ViewableTestObject extends DataObject implements TestOnly, Dynamic\ViewableDataObject\VDOInterfaces\ViewableDataObjectInterface
-{
-    private static $db = [
-        'Title' => 'Varchar(255)',
-        'Content' => 'HtmlText',
-    ];
-
-    private static $extensions = [
-        'Dynamic\ViewableDataObject\Extensions\ViewableDataObject',
-    ];
-
-    public function getParentPage()
-    {
-        return Page::get()->first();
-    }
-}

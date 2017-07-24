@@ -120,7 +120,8 @@ class ViewableDataObject extends DataExtension
     public function getLink()
     {
         if ($this->hasParentPage()) {
-            return Controller::join_links($this->hasParentPage()->Link(), $this->hasViewAction(), $this->owner->URLSegment);
+            $linkString = $this->owner->config()->get('use_id') == true ? $this->owner->ID : $this->owner->URLSegment;
+            return Controller::join_links($this->hasParentPage()->Link(), $this->hasViewAction(), $linkString);
         }
         return false;
     }
