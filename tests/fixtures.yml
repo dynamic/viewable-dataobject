@@ -1,4 +1,4 @@
-ViewableTestObject:
+Dynamic\ViewableDataObject\Test\TestOnly\ViewableTestObject:
   one:
     Title: 'Object One'
   two:

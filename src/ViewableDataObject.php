@@ -2,24 +2,32 @@
 
 namespace Dynamic\ViewableDataObject\Extensions;
 
-use \DataExtension;
-use \FieldList;
-use \TextField;
-use \TextareaField;
-use \ToggleCompositeField;
-use \SiteTreeURLSegmentField;
-use \Controller;
-use \Director;
-use \SiteConfig;
-use \ModelAsController;
-use \DataObject;
-use \URLSegmentFilter;
-use \Versioned;
-use \SSViewer;
-use \ArrayList;
-use \ArrayData;
-use \Convert;
-use \Config;
+use SilverStripe\CMS\Controllers\RootURLController;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\ContentNegotiator;
+use SilverStripe\Control\RequestHandler;
+use SilverStripe\Dev\Debug;
+use SilverStripe\ORM\DataExtension;
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\TextField;
+use SilverStripe\Forms\TextareaField;
+use SilverStripe\Forms\ToggleCompositeField;
+use SilverStripe\CMS\Forms\SiteTreeURLSegmentField;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\Director;
+use SilverStripe\ORM\FieldType\DBHTMLText;
+use SilverStripe\Security\Permission;
+use SilverStripe\SiteConfig\SiteConfig;
+use SilverStripe\CMS\Controllers\ModelAsController;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\View\HTML;
+use SilverStripe\View\Parsers\URLSegmentFilter;
+use SilverStripe\Versioned\Versioned;
+use SilverStripe\View\SSViewer;
+use SilverStripe\ORM\ArrayList;
+use SilverStripe\View\ArrayData;
+use SilverStripe\Core\Convert;
+use SilverStripe\Core\Config\Config;
 
 class ViewableDataObject extends DataExtension
 {
@@ -48,6 +56,17 @@ class ViewableDataObject extends DataExtension
     private static $indexes = [
         'URLSegment' => true,
     ];
+
+    /**
+     * @var array
+     */
+    private static $casting = array(
+        "Breadcrumbs" => "HTMLFragment",
+        'Link' => 'Text',
+        'RelativeLink' => 'Text',
+        'AbsoluteLink' => 'Text',
+        'MetaTags' => 'HTMLFragment',
+    );
 
     /**
      * @param FieldList $fields
@@ -110,97 +129,110 @@ class ViewableDataObject extends DataExtension
     }
 
     /**
-     * Returns a link via the beer primary category for the object view
-     *
-     * @access public
-     * @return string
-     * @link http://api.silverstripe.org/3.1/class-Controller.html#_join_links
-     *
+     * @param null $action
+     * @return bool|string
      */
-    public function getLink()
+    public function Link($action = null)
     {
         if ($this->hasParentPage()) {
-            return Controller::join_links($this->hasParentPage()->Link(), $this->hasViewAction(), $this->owner->URLSegment);
+            return Controller::join_links($this->hasParentPage()->Link(), $this->hasViewAction(), $this->owner->RelativeLink($action));
         }
         return false;
     }
 
     /**
+     * @param null $action
      * @return string
      */
-    public function Link()
+    public function AbsoluteLink($action = null)
     {
-        return $this->getLink();
+        if ($this->owner->hasMethod('alternateAbsoluteLink')) {
+            return $this->owner->alternateAbsoluteLink($action);
+        } else {
+            return Director::absoluteURL($this->owner->Link($action));
+        }
     }
 
     /**
-     * function that gets the absolute
-     * version of the event's {@link getlink()}
-     *
-     * @return String
+     * @param null $action
+     * @return string
      */
-    public function getAbsoluteLink()
+    public function RelativeLink($action = null)
     {
-        return Controller::join_links(Director::absoluteBaseURL(), $this->getLink());
+        if ($this->owner->ParentID && SiteConfig::current_site_config()->nested_urls) {
+            $parent = $this->owner->Parent();
+            // If page is removed select parent from version history (for archive page view)
+            if ((!$parent || !$parent->exists()) && !$this->owner->isOnDraft()) {
+                $parent = Versioned::get_latest_version($this->owner->ClassName, $this->owner->ParentID);
+            }
+            $base = $parent->RelativeLink($this->owner->URLSegment);
+        } elseif (!$action && $this->owner->URLSegment == RootURLController::get_homepage_link()) {
+            // Unset base for root-level homepages.
+            // Note: Homepages with action parameters (or $action === true)
+            // need to retain their URLSegment.
+            $base = null;
+        } else {
+            $base = $this->owner->URLSegment;
+        }
+
+        $this->owner->extend('updateRelativeLink', $base, $action);
+
+        // Legacy support: If $action === true, retain URLSegment for homepages,
+        // but don't append any action
+        if ($action === true) {
+            $action = null;
+        }
+
+        return Controller::join_links($base, '/', $action);
     }
 
     /**
-     * Returns true if this object has a URLSegment value that does not conflict with any other objects. This method
-     * checks for:
-     *  - A page with the same URLSegment that has a conflict
-     *  - Conflicts with actions on the parent page
-     *  - A conflict caused by a root page having the same URLSegment as a class name
-     *
-     * @return bool
+     * @return bool|mixed
      */
     public function validURLSegment()
     {
         if (SiteConfig::current_site_config()->nested_urls && $parent = $this->owner->Parent()) {
             if ($controller = ModelAsController::controller_for($parent)) {
-                if ($controller instanceof Controller && $controller->hasAction($this->owner->URLSegment)) return false;
+                if ($controller instanceof Controller && $controller->hasAction($this->owner->URLSegment)) {
+                    return false;
+                }
             }
         }
 
         if (!SiteConfig::current_site_config()->nested_urls || !$this->owner->ParentID) {
-            if (class_exists($this->owner->URLSegment) && is_subclass_of($this->owner->URLSegment, 'RequestHandler')) return false;
+            if (class_exists($this->owner->URLSegment) && is_subclass_of($this->owner->URLSegment, RequestHandler::class)) {
+                return false;
+            }
         }
 
         // Filters by url, id, and parent
-        $filter = array('"' . $this->owner->Classname . '"."URLSegment"' => $this->owner->URLSegment);
+        $table = DataObject::getSchema()->tableForField($this->owner->ClassName, 'URLSegment');
+        $filter = array('"'.$table.'"."URLSegment"' => $this->owner->URLSegment);
         if ($this->owner->ID) {
-            $filter['"' . $this->owner->Classname . '"."ID" <> ?'] = $this->owner->ID;
+            $filter['"'.$table.'"."ID" <> ?'] = $this->owner->ID;
         }
-
         if (SiteConfig::current_site_config()->nested_urls) {
-            $filter['"' . $this->owner->Classname . '"."ParentID"'] = $this->owner->ParentID ? $this->owner->ParentID : 0;
+            $filter['"'.$table.'"."ParentID"'] = $this->owner->ParentID ? $this->owner->ParentID : 0;
         }
 
-        $votes = array_filter(
+        // If any of the extensions return `0` consider the segment invalid
+        $extensionResponses = array_filter(
             (array)$this->owner->extend('augmentValidURLSegment'),
-            function ($v) {
-                return !is_null($v);
+            function ($response) {
+                return !is_null($response);
             }
         );
-
-        if ($votes) {
-            return min($votes);
+        if ($extensionResponses) {
+            return min($extensionResponses);
         }
 
         // Check existence
-        $existingPage = DataObject::get_one($this->owner->Classname, $filter);
-        if ($existingPage) return false;
-        return !($existingPage);
+        return !DataObject::get($this->owner->ClassName, $filter)->exists();
     }
+
     /**
-     * Generate a URL segment based on the title provided.
-     *
-     * If {@link Extension}s wish to alter URL segment generation, they can do so by defining
-     * updateURLSegment(&$url, $title).  $url will be passed by reference and should be modified. $title will contain
-     * the title that was originally used as the source of this generated URL. This lets extensions either start from
-     * scratch, or incrementally modify the generated URL.
-     *
-     * @param string $title Page title
-     * @return string Generated url segment
+     * @param $title
+     * @return string
      */
     public function generateURLSegment($title)
     {
@@ -212,34 +244,9 @@ class ViewableDataObject extends DataExtension
         $this->owner->extend('updateURLSegment', $t, $title);
         return $t;
     }
-    /**
-     * Gets the URL segment for the latest draft version of this page.
-     *
-     * @return string
-     */
-    public function getStageURLSegment()
-    {
-        $stageRecord = Versioned::get_one_by_stage($this->owner->Classname, 'Stage', array(
-            '"' . $this->owner->Classname . '"."ID"' => $this->owner->ID
-        ));
-        return ($stageRecord) ? $stageRecord->URLSegment : null;
-    }
 
     /**
-     * Gets the URL segment for the currently published version of this page.
-     *
-     * @return string
-     */
-    public function getLiveURLSegment()
-    {
-        $liveRecord = Versioned::get_one_by_stage($this->owner->Classname, 'Live', array(
-            '"' . $this->owner->Classname . '"."ID"' => $this->owner->ID
-        ));
-        return ($liveRecord) ? $liveRecord->URLSegment : null;
-    }
-
-    /**
-     * Generate custom metatags to display on the DataObject view page
+     * Generate custom meta tags to display on the DataObject view page
      *
      * @param bool $includeTitle
      * @return string
@@ -251,7 +258,8 @@ class ViewableDataObject extends DataExtension
         if($includeTitle === true || $includeTitle == 'true') {
             $tags .= "<title>" . Convert::raw2xml(($this->owner->MetaTitle)
                     ? $this->owner->MetaTitle
-                    : $this->owner->Title) . "</title>\n";
+                    : $this->owner->Title)
+                    . "</title>\n";
         }
         $tags .= "<meta name=\"generator\" content=\"SilverStripe - http://silverstripe.org\" />\n";
         $charset = Config::inst()->get('ContentNegotiator', 'encoding');
@@ -271,7 +279,7 @@ class ViewableDataObject extends DataExtension
      * @param bool $unlinked
      * @param bool $stopAtPageType
      * @param bool $showHidden
-     * @return \HTMLText
+     * @return DBHTMLText
      */
     public function Breadcrumbs($maxDepth = 20, $unlinked = false, $stopAtPageType = false, $showHidden = false)
     {
@@ -295,14 +303,12 @@ class ViewableDataObject extends DataExtension
     }
 
     /**
-     * function that performs pre-write tasks,
-     * calls parent function to ensure any changes
-     * are also called up the hierarchy
+     *
      */
     public function onBeforeWrite()
     {
         if (!$this->owner->URLSegment) {
-            $siteTree = singleton('SiteTree');
+            $siteTree = singleton(SiteTree::class);
             $this->owner->URLSegment = $siteTree->generateURLSegment($this->owner->Title);
         }
 
