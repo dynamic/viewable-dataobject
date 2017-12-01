@@ -6,7 +6,6 @@ use SilverStripe\CMS\Controllers\RootURLController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\ContentNegotiator;
 use SilverStripe\Control\RequestHandler;
-use SilverStripe\Dev\Debug;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextField;
@@ -16,7 +15,6 @@ use SilverStripe\CMS\Forms\SiteTreeURLSegmentField;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\ORM\FieldType\DBHTMLText;
-use SilverStripe\Security\Permission;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\CMS\Controllers\ModelAsController;
 use SilverStripe\ORM\DataObject;
@@ -46,8 +44,8 @@ class ViewableDataObject extends DataExtension
      * @var array
      */
     private static $defaults = array(
-        'Title'=>'New Item',
-        'URLSegment' => 'new-item'
+        'Title' => 'New Item',
+        'URLSegment' => 'new-item',
     );
 
     /**
@@ -61,7 +59,7 @@ class ViewableDataObject extends DataExtension
      * @var array
      */
     private static $casting = array(
-        "Breadcrumbs" => "HTMLFragment",
+        'Breadcrumbs' => 'HTMLFragment',
         'Link' => 'Text',
         'RelativeLink' => 'Text',
         'AbsoluteLink' => 'Text',
@@ -88,7 +86,7 @@ class ViewableDataObject extends DataExtension
         if ($page = $this->hasParentPage()) {
             $fields->insertAfter(
                 SiteTreeURLSegmentField::create('URLSegment')
-                    ->setURLPrefix($page->Link() . $this->hasViewAction() . '/'),
+                    ->setURLPrefix($page->Link().$this->hasViewAction().'/'),
                 'MenuTitle'
             );
         }
@@ -99,8 +97,8 @@ class ViewableDataObject extends DataExtension
                 'Metadata',
                 'Metadata',
                 array(
-                    new TextField("MetaTitle", $this->owner->fieldLabel('MetaTitle')),
-                    new TextareaField("MetaDescription", $this->owner->fieldLabel('MetaDescription'))
+                    new TextField('MetaTitle', $this->owner->fieldLabel('MetaTitle')),
+                    new TextareaField('MetaDescription', $this->owner->fieldLabel('MetaDescription')),
                 )
             )
         );
@@ -114,6 +112,7 @@ class ViewableDataObject extends DataExtension
         if ($this->owner->hasMethod('getParentPage')) {
             return $this->owner->getParentPage();
         }
+
         return false;
     }
 
@@ -125,23 +124,31 @@ class ViewableDataObject extends DataExtension
         if ($this->owner->hasMethod('getViewAction')) {
             return $this->owner->getViewAction();
         }
+
         return 'view';
     }
 
     /**
      * @param null $action
+     *
      * @return bool|string
      */
     public function Link($action = null)
     {
         if ($this->hasParentPage()) {
-            return Controller::join_links($this->hasParentPage()->Link(), $this->hasViewAction(), $this->owner->RelativeLink($action));
+            return Controller::join_links(
+                $this->hasParentPage()->Link(),
+                $this->hasViewAction(),
+                $this->owner->RelativeLink($action)
+            );
         }
+
         return false;
     }
 
     /**
      * @param null $action
+     *
      * @return string
      */
     public function AbsoluteLink($action = null)
@@ -155,6 +162,7 @@ class ViewableDataObject extends DataExtension
 
     /**
      * @param null $action
+     *
      * @return string
      */
     public function RelativeLink($action = null)
@@ -200,7 +208,8 @@ class ViewableDataObject extends DataExtension
         }
 
         if (!SiteConfig::current_site_config()->nested_urls || !$this->owner->ParentID) {
-            if (class_exists($this->owner->URLSegment) && is_subclass_of($this->owner->URLSegment, RequestHandler::class)) {
+            if (class_exists($this->owner->URLSegment) &&
+                is_subclass_of($this->owner->URLSegment, RequestHandler::class)) {
                 return false;
             }
         }
@@ -217,7 +226,7 @@ class ViewableDataObject extends DataExtension
 
         // If any of the extensions return `0` consider the segment invalid
         $extensionResponses = array_filter(
-            (array)$this->owner->extend('augmentValidURLSegment'),
+            (array) $this->owner->extend('augmentValidURLSegment'),
             function ($response) {
                 return !is_null($response);
             }
@@ -232,6 +241,7 @@ class ViewableDataObject extends DataExtension
 
     /**
      * @param $title
+     *
      * @return string
      */
     public function generateURLSegment($title)
@@ -239,33 +249,37 @@ class ViewableDataObject extends DataExtension
         $filter = URLSegmentFilter::create();
         $t = $filter->filter($title);
         // Fallback to generic page name if path is empty (= no valid, convertable characters)
-        if (!$t || $t == '-' || $t == '-1') $t = "page-$this->owner->ID";
+        if (!$t || $t == '-' || $t == '-1') {
+            $t = "page-$this->owner->ID";
+        }
         // Hook for extensions
         $this->owner->extend('updateURLSegment', $t, $title);
+
         return $t;
     }
 
     /**
-     * Generate custom meta tags to display on the DataObject view page
+     * Generate custom meta tags to display on the DataObject view page.
      *
      * @param bool $includeTitle
+     *
      * @return string
      */
     public function MetaTags($includeTitle = true)
     {
-        $tags = "";
+        $tags = '';
 
-        if($includeTitle === true || $includeTitle == 'true') {
-            $tags .= "<title>" . Convert::raw2xml(($this->owner->MetaTitle)
+        if ($includeTitle === true || $includeTitle == 'true') {
+            $tags .= '<title>'.Convert::raw2xml(($this->owner->MetaTitle)
                     ? $this->owner->MetaTitle
                     : $this->owner->Title)
-                    . "</title>\n";
+                    ."</title>\n";
         }
         $tags .= "<meta name=\"generator\" content=\"SilverStripe - http://silverstripe.org\" />\n";
         $charset = Config::inst()->get('ContentNegotiator', 'encoding');
         $tags .= "<meta http-equiv=\"Content-type\" content=\"text/html; charset=$charset\" />\n";
-        if($this->owner->MetaDescription) {
-            $tags .= "<meta name=\"description\" content=\"" . Convert::raw2att($this->owner->MetaDescription) . "\" />\n";
+        if ($this->owner->MetaDescription) {
+            $tags .= '<meta name="description" content="'.Convert::raw2att($this->owner->MetaDescription)."\" />\n";
         }
         $this->owner->extend('updateMetaTags', $tags);
 
@@ -273,12 +287,13 @@ class ViewableDataObject extends DataExtension
     }
 
     /**
-     * Produce the correct breadcrumb trail for use on the DataObject Item Page
+     * Produce the correct breadcrumb trail for use on the DataObject Item Page.
      *
-     * @param int $maxDepth
+     * @param int  $maxDepth
      * @param bool $unlinked
      * @param bool $stopAtPageType
      * @param bool $showHidden
+     *
      * @return DBHTMLText
      */
     public function Breadcrumbs($maxDepth = 20, $unlinked = false, $stopAtPageType = false, $showHidden = false)
@@ -286,8 +301,7 @@ class ViewableDataObject extends DataExtension
         $page = Controller::curr();
         $pages = array();
         $pages[] = $this->owner;
-        while (
-            $page
+        while ($page
             && (!$maxDepth || count($pages) < $maxDepth)
             && (!$stopAtPageType || $page->ClassName != $stopAtPageType)
         ) {
@@ -297,8 +311,9 @@ class ViewableDataObject extends DataExtension
             $page = $page->Parent;
         }
         $template = new SSViewer('BreadcrumbsTemplate');
+
         return $template->process($this->owner->customise(new ArrayData(array(
-            'Pages' => new ArrayList(array_reverse($pages))
+            'Pages' => new ArrayList(array_reverse($pages)),
         ))));
     }
 
@@ -315,8 +330,8 @@ class ViewableDataObject extends DataExtension
         // Ensure that this object has a non-conflicting URLSegment value.
         $count = 2;
         while (!$this->owner->validURLSegment()) {
-            $this->owner->URLSegment = preg_replace('/-[0-9]+$/', null, $this->owner->URLSegment) . '-' . $count;
-            $count++;
+            $this->owner->URLSegment = preg_replace('/-[0-9]+$/', null, $this->owner->URLSegment).'-'.$count;
+            ++$count;
         }
 
         parent::onBeforeWrite();

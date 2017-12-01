@@ -44,5 +44,4 @@ class ViewableTestObject extends DataObject implements TestOnly, ViewableDataObj
     {
         return 'view';
     }
-
 }
