@@ -66,7 +66,7 @@ class ViewableDataObjectTest extends SapphireTest
     {
         $object = $this->getObject();
         $page = $this->objFromFixture(\Page::class, 'default');
-        $this->assertEquals($page->Link() . 'view/' . $object->URLSegment . '/', $object->Link());
+        $this->assertEquals($page->Link().'view/'.$object->URLSegment.'/', $object->Link());
     }
 
     /**
@@ -76,7 +76,7 @@ class ViewableDataObjectTest extends SapphireTest
     {
         $object = $this->getObject();
         $page = $this->objFromFixture(\Page::class, 'default');
-        $this->assertEquals($page->AbsoluteLink() . 'view/' . $object->URLSegment . '/', $object->AbsoluteLink());
+        $this->assertEquals($page->AbsoluteLink().'view/'.$object->URLSegment.'/', $object->AbsoluteLink());
     }
 
     /**

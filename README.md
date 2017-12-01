@@ -16,7 +16,7 @@ DataExtension that easily allows a dataobject to be viewed like a Page
 
 ## Requirements
 
-- SilverStripe 3.2
+- SilverStripe ^4.0
 
 ## Installation
 
