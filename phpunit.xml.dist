@@ -1,13 +1,13 @@
-<phpunit bootstrap="framework/tests/bootstrap.php" colors="true">
+<phpunit bootstrap="vendor/silverstripe/cms/tests/bootstrap.php" colors="true">
     <testsuite name="viewable-dataobject">
-        <directory>viewable-dataobject/tests</directory>
+        <directory>tests</directory>
     </testsuite>
 
     <filter>
         <whitelist addUncoveredFilesFromWhitelist="true">
-            <directory suffix=".php">viewable-dataobject/src/</directory>
+            <directory suffix=".php">src/</directory>
             <exclude>
-                <directory suffix=".php">viewable-dataobject/tests/</directory>
+                <directory suffix=".php">tests/</directory>
             </exclude>
         </whitelist>
     </filter>
