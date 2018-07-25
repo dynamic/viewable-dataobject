@@ -2,31 +2,41 @@
 
 namespace Dynamic\ViewableDataObject\Extensions;
 
+use SilverStripe\CMS\Controllers\ModelAsController;
 use SilverStripe\CMS\Controllers\RootURLController;
+use SilverStripe\CMS\Forms\SiteTreeURLSegmentField;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\ContentNegotiator;
-use SilverStripe\Control\RequestHandler;
-use SilverStripe\ORM\DataExtension;
-use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\TextField;
-use SilverStripe\Forms\TextareaField;
-use SilverStripe\Forms\ToggleCompositeField;
-use SilverStripe\CMS\Forms\SiteTreeURLSegmentField;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Control\RequestHandler;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\TextareaField;
+use SilverStripe\Forms\TextField;
+use SilverStripe\Forms\ToggleCompositeField;
+use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\DataExtension;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\SiteConfig\SiteConfig;
-use SilverStripe\CMS\Controllers\ModelAsController;
-use SilverStripe\ORM\DataObject;
+use SilverStripe\Versioned\Versioned;
+use SilverStripe\View\ArrayData;
 use SilverStripe\View\HTML;
 use SilverStripe\View\Parsers\URLSegmentFilter;
-use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\SSViewer;
-use SilverStripe\ORM\ArrayList;
-use SilverStripe\View\ArrayData;
-use SilverStripe\Core\Convert;
-use SilverStripe\Core\Config\Config;
 
+/**
+ * Class ViewableDataObject
+ * @package Dynamic\ViewableDataObject\Extensions
+ *
+ * @property string $Title
+ * @property string $MenuTitle
+ * @property string $URLSegment
+ * @property string $MetaTitle
+ * @property string $MetaDescription
+ */
 class ViewableDataObject extends DataExtension
 {
     /**
@@ -86,7 +96,7 @@ class ViewableDataObject extends DataExtension
         if ($page = $this->hasParentPage()) {
             $fields->insertAfter(
                 SiteTreeURLSegmentField::create('URLSegment')
-                    ->setURLPrefix($page->Link().$this->hasViewAction().'/'),
+                    ->setURLPrefix($page->Link() . $this->hasViewAction() . '/'),
                 'MenuTitle'
             );
         }
@@ -216,17 +226,17 @@ class ViewableDataObject extends DataExtension
 
         // Filters by url, id, and parent
         $table = DataObject::getSchema()->tableForField($this->owner->ClassName, 'URLSegment');
-        $filter = array('"'.$table.'"."URLSegment"' => $this->owner->URLSegment);
+        $filter = array('"' . $table . '"."URLSegment"' => $this->owner->URLSegment);
         if ($this->owner->ID) {
-            $filter['"'.$table.'"."ID" <> ?'] = $this->owner->ID;
+            $filter['"' . $table . '"."ID" <> ?'] = $this->owner->ID;
         }
         if (SiteConfig::current_site_config()->nested_urls) {
-            $filter['"'.$table.'"."ParentID"'] = $this->owner->ParentID ? $this->owner->ParentID : 0;
+            $filter['"' . $table . '"."ParentID"'] = $this->owner->ParentID ? $this->owner->ParentID : 0;
         }
 
         // If any of the extensions return `0` consider the segment invalid
         $extensionResponses = array_filter(
-            (array) $this->owner->extend('augmentValidURLSegment'),
+            (array)$this->owner->extend('augmentValidURLSegment'),
             function ($response) {
                 return !is_null($response);
             }
@@ -263,33 +273,50 @@ class ViewableDataObject extends DataExtension
      *
      * @param bool $includeTitle
      *
-     * @return string
+     * @return DBField
      */
     public function MetaTags($includeTitle = true)
     {
-        $tags = '';
+        $tags = array();
 
-        if ($includeTitle === true || $includeTitle == 'true') {
-            $tags .= '<title>'.Convert::raw2xml(($this->owner->MetaTitle)
-                    ? $this->owner->MetaTitle
-                    : $this->owner->Title)
-                    ."</title>\n";
+        if ($includeTitle && strtolower($includeTitle) != 'false') {
+            $title = $this->owner->MetaTitle
+                ? $this->owner->MetaTitle
+                : $this->owner->Title;
+            $tags[] = HTML::createTag('title', array(), $title);
         }
-        $tags .= "<meta name=\"generator\" content=\"SilverStripe - http://silverstripe.org\" />\n";
-        $charset = Config::inst()->get('ContentNegotiator', 'encoding');
-        $tags .= "<meta http-equiv=\"Content-type\" content=\"text/html; charset=$charset\" />\n";
+        $generator = trim(Config::inst()->get(SiteTree::class, 'meta_generator'));
+        if (!empty($generator)) {
+            $tags[] = HTML::createTag('meta', array(
+                'name' => 'generator',
+                'content' => $generator,
+            ));
+        }
+
+        $charset = ContentNegotiator::config()->uninherited('encoding');
+        $tags[] = HTML::createTag('meta', array(
+            'http-equiv' => 'Content-Type',
+            'content' => 'text/html; charset=' . $charset,
+        ));
+
         if ($this->owner->MetaDescription) {
-            $tags .= '<meta name="description" content="'.Convert::raw2att($this->owner->MetaDescription)."\" />\n";
+            $tags[] = HTML::createTag('meta', array(
+                'name' => 'description',
+                'content' => $this->owner->MetaDescription,
+            ));
         }
-        $this->owner->extend('updateMetaTags', $tags);
 
-        return $tags;
+        $this->owner->extend('updateMetaTagsArray', $tags);
+        $tagString = implode("\n", $tags);
+        $this->owner->extend('updateMetaTags', $tagString);
+
+        return DBField::create_field('HTMLFragment', $tagString);
     }
 
     /**
      * Produce the correct breadcrumb trail for use on the DataObject Item Page.
      *
-     * @param int  $maxDepth
+     * @param int $maxDepth
      * @param bool $unlinked
      * @param bool $stopAtPageType
      * @param bool $showHidden
@@ -330,7 +357,7 @@ class ViewableDataObject extends DataExtension
         // Ensure that this object has a non-conflicting URLSegment value.
         $count = 2;
         while (!$this->owner->validURLSegment()) {
-            $this->owner->URLSegment = preg_replace('/-[0-9]+$/', null, $this->owner->URLSegment).'-'.$count;
+            $this->owner->URLSegment = preg_replace('/-[0-9]+$/', null, $this->owner->URLSegment) . '-' . $count;
             ++$count;
         }
 
