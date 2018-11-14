@@ -2,7 +2,6 @@
 
 namespace Dynamic\ViewableDataObject\Extensions;
 
-
 use SilverStripe\Core\Extension;
 use SilverStripe\View\SSViewer;
 use SilverStripe\View\ThemeResourceLoader;
