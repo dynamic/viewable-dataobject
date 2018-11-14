@@ -57,10 +57,13 @@ On the Page_Controller you'd like to view your DataObject:
 
 ```php
 <?php
-	
-class MyDisplayPageController extends PageController
+
+use SilverStripe\Control\HTTPRequest;
+use SilverStripe\View\ArrayData;
+
+class MyDisplayPageController extends \PageController
 {
-    public function myobject(SS_HTTPRequest $request)
+    public function myobject(HTTPRequest $request)
     {
         $urlSegment = $request->latestParam('ID');
 	
@@ -71,7 +74,7 @@ class MyDisplayPageController extends PageController
         return $this->customise(new ArrayData([
             'Object' => $object,
             'Title' => $object->Title,
-            'MetaTags' => $object->MetaTags(),
+            'MetaTags' => $object->MetaTags(false),
             'Breadcrumbs' => $object->Breadcrumbs(),
         ]));
     }
@@ -93,10 +96,12 @@ Instead of calling `render`, `renderWith`, or `customize`; `renderWithLayout` ca
 
 ```php
 <?php
-	
-class MyDisplayPageController extends PageController
+
+use SilverStripe\Control\HTTPRequest;
+
+class MyDisplayPageController extends \PageController
 {
-    public function myobject(SS_HTTPRequest $request)
+    public function myobject(HTTPRequest $request)
     {
         $urlSegment = $request->latestParam('ID');
 	
@@ -110,7 +115,7 @@ class MyDisplayPageController extends PageController
         ], [
         	'Object' => $object,
             'Title' => $object->Title,
-            'MetaTags' => $object->MetaTags(),
+            'MetaTags' => $object->MetaTags(false),
             'Breadcrumbs' => $object->Breadcrumbs(),
         ]);
     }
