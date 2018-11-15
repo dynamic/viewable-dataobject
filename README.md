@@ -22,13 +22,12 @@ DataExtension that easily allows a dataobject to be viewed like a Page
 
 `composer require dynamic/viewable-dataobject`
 
-In config.yml;
+In config.yml:
 
 ```yml
 MyDataObject:
 	extensions:
 		- Dynamic\ViewableDataObject\Extensions\ViewableDataObject
-
 ```
 
 ## Example usage
@@ -52,16 +51,19 @@ class MyDataObject extends DataObject implements ViewableDataObjectInterface
 		return 'myobject';
 	}
 }
-```	
+```
 
 On the Page_Controller you'd like to view your DataObject:
 
 ```php
 <?php
-	
-class MyDisplayPage_Controller extends Page_Controller
+
+use SilverStripe\Control\HTTPRequest;
+use SilverStripe\View\ArrayData;
+
+class MyDisplayPageController extends \PageController
 {
-    public function myobject(SS_HTTPRequest $request)
+    public function myobject(HTTPRequest $request)
     {
         $urlSegment = $request->latestParam('ID');
 	
@@ -72,12 +74,52 @@ class MyDisplayPage_Controller extends Page_Controller
         return $this->customise(new ArrayData([
             'Object' => $object,
             'Title' => $object->Title,
-            'MetaTags' => $object->MetaTags(),
+            'MetaTags' => $object->MetaTags(false),
             'Breadcrumbs' => $object->Breadcrumbs(),
-        ]))->renderWith([
-            'MyDataObject',
-            'Page',
+        ]));
+    }
+} 	
+```
+
+## Controller Extension
+
+Adding the controller extension to a class will allow for using custom layout templates.
+
+In config.yml:
+```yml
+MyControler:
+	extensions:
+		- Dynamic\ViewableDataObject\Extensions\ControllerExtension
+```
+
+Instead of calling `render`, `renderWith`, or `customize`; `renderWithLayout` can be passed a list of layout templates and extra data.
+
+```php
+<?php
+
+use SilverStripe\Control\HTTPRequest;
+
+class MyDisplayPageController extends \PageController
+{
+    public function myobject(HTTPRequest $request)
+    {
+        $urlSegment = $request->latestParam('ID');
+	
+        if (!$object = MyDataObject::get()->filter('URLSegment', $urlSegment)->first()) {
+            return $this->httpError(404, "The object you're looking for doesn't seem to be here.");
+        }
+		
+        return $this->renderWithLayout([
+            MyDataObject::class,
+            MyDisplayPage::class,
+        ], [
+        	'Object' => $object,
+            'Title' => $object->Title,
+            'MetaTags' => $object->MetaTags(false),
+            'Breadcrumbs' => $object->Breadcrumbs(),
         ]);
     }
 } 	
 ```
+`renderWithLayout` will add `\Page::class` to the end of the template list.
+The first valid template in the array will be used.
