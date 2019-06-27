@@ -93,9 +93,10 @@ class ViewableDataObject extends DataExtension
         );
 
         if ($page = $this->hasParentPage()) {
+            $urlPrefix = Controller::join_links($page->Link(), $this->hasViewAction());
             $fields->insertAfter(
                 SiteTreeURLSegmentField::create('URLSegment')
-                    ->setURLPrefix($page->Link() . $this->hasViewAction() . '/'),
+                    ->setURLPrefix($urlPrefix),
                 'MenuTitle'
             );
         }
