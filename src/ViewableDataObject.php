@@ -54,8 +54,7 @@ class ViewableDataObject extends DataExtension
      * @var array
      */
     private static $defaults = array(
-        'Title' => 'New Item',
-        'URLSegment' => 'new-item',
+        'Title' => 'New Item'
     );
 
     /**
